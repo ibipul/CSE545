@@ -51,7 +51,7 @@ class MyMapReduce:  # [TODO]
             for (k, v) in mapped_kvs:
                 namenode_m2r.append((self.partitionFunction(k), (k, v)))
 
-    def partitionFunction(self, k):  # [TODO] --attempted
+    def partitionFunction(self, k):  # [TODO] --completed
 
         # given a key returns the reduce task to send it
         key_as_string = str(k)
@@ -66,7 +66,7 @@ class MyMapReduce:  # [TODO]
         # sort all values for each key (can use a list of dictionary)
         # call reducers on each key with a list of values
         # and append the result for each key to namenode_fromR
-        # [TODO] --attempted
+        # [TODO] --completed
         kvs_master_dict=defaultdict(list)
         for w in kvs:
             kvs_master_dict[w[0]].append(w[1])
@@ -78,7 +78,7 @@ class MyMapReduce:  # [TODO]
             namenode_fromR.append(reduced_kv)
 
 
-    def runSystem(self):  # [TODO]--attempted
+    def runSystem(self):  # [TODO]--completed
         # runs the full map-reduce system processes on mrObject
 
         # the following two lists are shared by all processes
@@ -97,7 +97,7 @@ class MyMapReduce:  # [TODO]
         #      p = Process(target=self.mapTask, args=(chunk,namenode_m2r))
         #      p.start()
         #  (it might be useful to keep the processes in a list)
-        # [TODO] --attempted
+        # [TODO] --completed
         chunk_list = []
         # List of data tuples: (a,b) grouped together by congruence modulo of num_map_tasks on 'a'
         for i in range(self.num_map_tasks):
@@ -112,7 +112,7 @@ class MyMapReduce:  # [TODO]
             mapper_process_list.append(mproc)
 
         # join map task processes back
-        # [TODO] --attempted
+        # [TODO] --completed
         for mproc in mapper_process_list:
             mproc.join()
 
@@ -124,13 +124,13 @@ class MyMapReduce:  # [TODO]
         # "send" each key-value pair to its assigned reducer by placing each
         # into a list of lists, where to_reduce_task[task_num] = [list of kv pairs]
         to_reduce_task = [[] for i in range(self.num_reduce_tasks)]
-        # [TODO] -- attempted
+        # [TODO] --completed
         for kv_tuple in sorted(list(namenode_m2r)):
             to_reduce_task[kv_tuple[0]].append(kv_tuple[1])
 
 
         # launch the reduce tasks as a new process for each.
-        # [TODO] --attempted
+        # [TODO] --completed
         reducer_process_list=[]
         for i in range(self.num_reduce_tasks):
             rproc = Process(target=self.reduceTask, args=(to_reduce_task[i],namenode_fromR))
@@ -138,7 +138,7 @@ class MyMapReduce:  # [TODO]
             reducer_process_list.append(rproc)
 
         # join the reduce tasks back
-        # [TODO]--attempted
+        # [TODO]--completed
         for rproc in reducer_process_list:
             rproc.join()
 
@@ -173,7 +173,7 @@ class WordCountMR(MyMapReduce):  # [DONE]
         return (k, np.sum(vs))
 
 
-class SetDifferenceMR(MyMapReduce):  # [TODO]
+class SetDifferenceMR(MyMapReduce):  # [TODO] -- completed
     # contains the map and reduce function for set difference
     # Assume that the mapper receives the "set" as a list of any primitives or comparable objects
     # def map(self, k, v):

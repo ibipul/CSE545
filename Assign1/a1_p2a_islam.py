@@ -2,8 +2,6 @@ from pprint import pprint
 from random import random
 import re,string
 
-import findspark #conda install -c conda-forge findspark
-findspark.init()
 from pyspark import SparkContext
 sc = SparkContext('local', 'Problems 2a')
 
@@ -44,6 +42,12 @@ data = [('R', [x for x in range(50) if random() > 0.5]),
 
 # Set difference implementation via filter function
 def set_difference_operator(tuples):
+    """
+    Identifies elemets of R-S and returns a boolean
+    :param tuples tuple:
+    :return: True/False
+    :rtype bool:
+    """
     return True if 'R' in tuples[1] and len(tuples[1]) == 1 else False
 
 rdd = sc.parallelize(data)

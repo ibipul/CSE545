@@ -86,10 +86,3 @@ final_aggregate = t5.collect()
 
 ## Pretty print of the output
 pprint(sorted(list(final_aggregate)))
-
-
-
-
-
-
-#re.compile('<date>(.*?)</date>[\r\n]+<post>(.*?)</post', re.IGNORECASE).findall()

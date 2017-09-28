@@ -1,10 +1,14 @@
-########################################
-## Template Code for Big Data Analytics
-## assignment 1 - part I, at Stony Brook Univeristy
-## Fall 2017
+"""
+    Assignment 1 (part 1, part2)
+    Bipul Islam SBU# 111578726
 
-
-import sys
+    Additional functionality Change Log:
+    -- Defined an abstract method printOutput() to MyMapReduce Class
+       - It is over-ridden by the MR Job class
+       - This is important so that we can Job specific prints without additional
+         changes and if-else filters to backend code.
+    -- Added the printOutput Override functions to WordCountMR, and SetDifferenceME classes
+"""
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from multiprocessing import Process, Manager
@@ -15,10 +19,9 @@ import re
 import numpy as np
 from random import random
 
-
-##########################################################################
-##########################################################################
-# PART I. MapReduce
+"""
+Map Reduce backend. This class is extended by Job specific MR Tasks
+"""
 
 class MyMapReduce:  # [TODO]
     __metaclass__ = ABCMeta
@@ -28,22 +31,31 @@ class MyMapReduce:  # [TODO]
         self.num_map_tasks = num_map_tasks  # how many processes to spawn as map tasks
         self.num_reduce_tasks = num_reduce_tasks  # " " " as reduce tasks
 
-    ###########################################################
-    # programmer methods (to be overridden by inheriting class)
-
+    """
+    Following methods - map, reduce & printOutput over ridden is Task classes 
+    """
     @abstractmethod
-    def map(self, k, v):  # [DONE]
+    def map(self, k, v):
         print("Need to override map")
 
     @abstractmethod
-    def reduce(self, k, vs):  # [DONE]
+    def reduce(self, k, vs):
         print("Need to override reduce")
+
+    @abstractmethod
+    def printOutput(self, object):
+        print("Needs to override print task, for each job class")
 
     ###########################################################
     # System Code: What the map reduce backend handles
 
-    def mapTask(self, data_chunk, namenode_m2r):  # [DONE]
-        # runs the mappers and assigns each k,v to a reduce task
+    def mapTask(self, data_chunk, namenode_m2r):
+        """
+        Runs the mappers and assigns each k,v to a reduce task
+        :param list data_chunk:
+        :param list namenode_m2r:
+        :return:
+        """
         for (k, v) in data_chunk:
             # run mappers:
             mapped_kvs = self.map(k, v)
@@ -52,72 +64,75 @@ class MyMapReduce:  # [TODO]
                 namenode_m2r.append((self.partitionFunction(k), (k, v)))
 
     def partitionFunction(self, k):  # [TODO] --completed
-
-        # given a key returns the reduce task to send it
+        """
+         Given a key returns the reduce task to send it
+        :param k:
+        :return: Returns the reduce task number
+        :rtype: int
+        """
         key_as_string = str(k)
         character_sum = sum([ ord(i) for i in key_as_string])
         reduce_task_number = character_sum % self.num_reduce_tasks
         return reduce_task_number
 
-
-
     def reduceTask(self, kvs, namenode_fromR):  # [TODO]
-
-        # sort all values for each key (can use a list of dictionary)
-        # call reducers on each key with a list of values
-        # and append the result for each key to namenode_fromR
-        # [TODO] --completed
+        """
+        Sorts all values for each key (can use a list of dictionary)
+        Calls reducers on each key with a list of values
+        And appends the result for each key to namenode_fromR
+        :param kvs:
+        :param namenode_fromR:
+        :return:
+        """
         kvs_master_dict=defaultdict(list)
         for w in kvs:
             kvs_master_dict[w[0]].append(w[1])
-            # except KeyError:
-            #     kvs_master_dict[w[0]] = [w[1]]
 
         for (k, vs) in kvs_master_dict.items():
             reduced_kv = self.reduce(k, vs)
-            namenode_fromR.append(reduced_kv)
+            if None in reduced_kv: #Filter tuples with None's
+                continue
+            else:
+                namenode_fromR.append(reduced_kv)
 
+    def printTask(self, object):
+        """
+        Given an reduced object this function calls
+        The class specif print operation to output in any desired format
+        :param object:
+        """
+        self.printOutput(object)
 
-    def runSystem(self):  # [TODO]--completed
-        # runs the full map-reduce system processes on mrObject
+    def runSystem(self):
+        """
+        Runs the full map-reduce system processes on mrObject
+        :return:
+        """
+        # The following two lists are shared by all processes in order to simulate the communication
+        namenode_m2r = Manager().list()  # stores the reducer task assignment. Form: [(reduce_task_num, (k, v)), ...]
+        namenode_fromR = Manager().list()  # stores key-value pairs returned. From[(k, v), ...]
 
-        # the following two lists are shared by all processes
-        # in order to simulate the communication
-        # [DONE]
-        namenode_m2r = Manager().list()  # stores the reducer task assignment and
-        # each key-value pair returned from mappers
-        # in the form: [(reduce_task_num, (k, v)), ...]
-        namenode_fromR = Manager().list()  # stores key-value pairs returned from reducers
-        # in the form [(k, v), ...]
-
-        # divide up the data into chunks accord to num_map_tasks, launch a new process
+        # Divide up the data into chunks accord to num_map_tasks, launch a new process
         # for each map task, passing the chunk of data to it.
-        # hint: if chunk contains the data going to a given maptask then the following
-        #      starts a process
-        #      p = Process(target=self.mapTask, args=(chunk,namenode_m2r))
-        #      p.start()
-        #  (it might be useful to keep the processes in a list)
-        # [TODO] --completed
         chunk_list = []
         # List of data tuples: (a,b) grouped together by congruence modulo of num_map_tasks on 'a'
         for i in range(self.num_map_tasks):
-            chunk_i = [ self.data[index]  for index in range(len(self.data)) if index%self.num_map_tasks == i]
+            chunk_i = [self.data[index]  for index in range(len(self.data))
+                        if index % self.num_map_tasks == i]
             chunk_list.append(chunk_i)
 
-        #Start mapper processes
+        # Start mapper processes
         mapper_process_list = []
         for i in range(self.num_map_tasks):
             mproc = Process(target=self.mapTask, args=(chunk_list[i],namenode_m2r))
             mproc.start()
             mapper_process_list.append(mproc)
 
-        # join map task processes back
-        # [TODO] --completed
+        # Join map task processes back
         for mproc in mapper_process_list:
             mproc.join()
 
         # print output from map tasks
-        # [DONE]
         print("namenode_m2r after map tasks complete:")
         pprint(sorted(list(namenode_m2r)))
 
@@ -128,9 +143,7 @@ class MyMapReduce:  # [TODO]
         for kv_tuple in sorted(list(namenode_m2r)):
             to_reduce_task[kv_tuple[0]].append(kv_tuple[1])
 
-
         # launch the reduce tasks as a new process for each.
-        # [TODO] --completed
         reducer_process_list=[]
         for i in range(self.num_reduce_tasks):
             rproc = Process(target=self.reduceTask, args=(to_reduce_task[i],namenode_fromR))
@@ -138,28 +151,24 @@ class MyMapReduce:  # [TODO]
             reducer_process_list.append(rproc)
 
         # join the reduce tasks back
-        # [TODO]--completed
         for rproc in reducer_process_list:
             rproc.join()
 
-
         # print output from reducer tasks
-        # [DONE]
         print("namenode_m2r after reduce tasks complete:")
-        pprint(sorted(list(namenode_fromR)))
+        self.printTask(namenode_fromR)
 
         # return all key-value pairs:
-        # [DONE]
         return namenode_fromR
 
-
-##########################################################################
-##########################################################################
-##Map Reducers:
-
-class WordCountMR(MyMapReduce):  # [DONE]
-    # the mapper and reducer for word count
-    def map(self, k, v):  # [DONE]
+"""
+ Task Specific Map-Reduce Classes 
+"""
+class WordCountMR(MyMapReduce):
+    """
+    The mapper and reducer for word count
+    """
+    def map(self, k, v):
         counts = dict()
         for w in v.split():
             w = w.lower()  # makes this case-insensitive
@@ -172,51 +181,31 @@ class WordCountMR(MyMapReduce):  # [DONE]
     def reduce(self, k, vs):  # [DONE]
         return (k, np.sum(vs))
 
+    def printOutput(self, object):
+        pprint(sorted(list(object)))
 
 class SetDifferenceMR(MyMapReduce):  # [TODO] -- completed
-    # contains the map and reduce function for set difference
-    # Assume that the mapper receives the "set" as a list of any primitives or comparable objects
-    # def map(self, k, v):
-    #     set_elements = dict()
-    #     for list_item in v:
-    #         set_elements[list_item]=k
-    #
-    #     return set_elements.items()
-    #
-    # def reduce(self, k, vs):
-    #     if len(vs) > 1:
-    #         return (k,None)
-    #     elif 'R' in vs:
-    #         return (k,'R')
-    #     else:
-    #         return (k,None)
-
-    key_name = 'SetDifference'
-    #Introducing an additional key to trick the partition Function
-    # to send all sets to the same reducer.
-    # So that reducer can output the result as [(R,[...])]
-
+    """
+    The Mapper and reducer for Set Difference class
+    """
     def map(self, k, v):
-        set_elements = defaultdict(list)
+        set_elements = dict()
         for list_item in v:
-            set_elements[self.key_name] = (k,v)
+            set_elements[list_item]=k
 
         return set_elements.items()
 
     def reduce(self, k, vs):
-        set_R = []
-        set_S = []
-        for (a,b) in vs:
-            if a=='R':
-                set_R = set_R + b
-            else:
-                set_S = set_S + b
+        if len(vs) > 1:
+            return (k,None)
+        elif 'R' in vs:
+            return (k,'R')
+        else:
+            return (k,None)
 
-        for element_from_S in set_S:
-            if element_from_S in set_R:
-                set_R.remove(element_from_S)
-
-        return ('R',set_R)
+    def printOutput(self, object):
+        content = str(sorted([ i[0] for i in object ]))
+        print("Set Difference is [(R,",content,")]")
 
 ##########################################################################
 ##########################################################################

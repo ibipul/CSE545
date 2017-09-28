@@ -24,7 +24,7 @@ def industry_search(text_str):
     and searches the blog post strings and reports the matched words.
     Words are returned if they are in the word boundary
     :param text_str string:
-    :return: List of matched words
+    :return: List of lists of matched words
     :rtype list:
     """
     match_list = []
@@ -32,8 +32,8 @@ def industry_search(text_str):
         p = re.compile(r'\b(%s)\b' % word, re.I)
         match_list.append(p.findall(text_str))
     # match_list is a nested list, we flatten it before returning it
-    flat_list = [item for sublist in match_list for item in sublist]
-    return flat_list
+    #flat_list = [item for sublist in match_list for item in sublist]
+    return match_list 
 
 def key_by_industry_date(date_industry_tuple):
     """
@@ -50,6 +50,7 @@ def key_by_industry_date(date_industry_tuple):
         key_reversal_list.append(((industry, date_str),1))
     return key_reversal_list
 
+# Timing tracker
 start_time = time.time()
 # Prob 2b part 1
 files_list = os.listdir(_LOCAL_DIR_PATH)
@@ -59,9 +60,11 @@ unique_industries_list = file_names.map(lambda x: (x.split('.')[3],1))\
 # This a spark Broadcast variable
 industry_set_list = sc.broadcast(set(unique_industries_list.collect()))
 
+# Timing tracker
 end_time1 = time.time()
 print(' Part A ran for: ', (end_time1 - start_time)/60, ' mins.')
 
+# Timing tracker
 end_time1 = time.time()
 # Prob 2b part 2:
 # Following is how the transformation works on RDD, and how they look in each stage
@@ -81,17 +84,19 @@ t0 = blogs.map(lambda x: re.sub('\s+',' ', x[1]))
 t1 = t0.map(lambda x: re.compile('<date>(.*?)</date> <post>(.*?)</post>', re.IGNORECASE).findall(x))
 # list flattening and date extraction
 t2 = t1.flatMap(lambda xs: [x for x in xs]).map(lambda x: (date_revarsal(x[0]),x[1]))
-# Search for industry mention list, by date and filter tuples with no industry mentions
-t3 = t2.map(lambda x: (x[0], industry_search(x[1].lower()))).filter(lambda x: False if len(x[1])==0 else True)
+# 1. Search for industry mention list by date, 2. flatten it and 3. filter tuples with no industry mentions
+t3 = t2.map(lambda x: (x[0], industry_search(x[1].lower())))\
+    .map(lambda x:(x[0],[item for sublist in x[1] for item in sublist]))\
+    .filter(lambda x: False if len(x[1])==0 else True)
 # Set industry name (lower case) as key and flatten to list of tuples with key as (industry,date)
-t4 = t3.map(lambda x: key_by_industry_date(x)).flatMap(lambda xs : [x for x in xs])
+t4 = t3.map(lambda x: key_by_industry_date(x)).flatMap(lambda xs : [x for x in xs]).repartition(4)
 # Reduce by (industry,date) key to get counts, then set key as industry and group by key
 t5 = t4.reduceByKey(add).map(lambda x: (x[0][0],(x[0][1],x[1]))).groupByKey().mapValues(tuple)
 final_aggregate = t5.collect()
 
 ## Pretty print of the output
 pprint(sorted(list(final_aggregate)))
-
 end_time2 = time.time()
 
+# Timing tracker
 print(' Part B ran for: ', (end_time2 - end_time1)/60,' mins')

@@ -89,7 +89,7 @@ t3 = t2.map(lambda x: (x[0], industry_search(x[1].lower())))\
     .map(lambda x:(x[0],[item for sublist in x[1] for item in sublist]))\
     .filter(lambda x: False if len(x[1])==0 else True)
 # Set industry name (lower case) as key and flatten to list of tuples with key as (industry,date)
-t4 = t3.map(lambda x: key_by_industry_date(x)).flatMap(lambda xs : [x for x in xs]).repartition(4)
+t4 = t3.map(lambda x: key_by_industry_date(x)).flatMap(lambda xs : [x for x in xs])
 # Reduce by (industry,date) key to get counts, then set key as industry and group by key
 t5 = t4.reduceByKey(add).map(lambda x: (x[0][0],(x[0][1],x[1]))).groupByKey().mapValues(tuple)
 final_aggregate = t5.collect()

@@ -32,8 +32,8 @@ def industry_search(text_str):
         p = re.compile(r'\b(%s)\b' % word, re.I)
         match_list.append(p.findall(text_str))
     # match_list is a nested list, we flatten it before returning it
-    #flat_list = [item for sublist in match_list for item in sublist]
-    return match_list 
+    flat_list = [item for sublist in match_list for item in sublist]
+    return flat_list 
 
 def key_by_industry_date(date_industry_tuple):
     """
@@ -84,10 +84,8 @@ t0 = blogs.map(lambda x: re.sub('\s+',' ', x[1]))
 t1 = t0.map(lambda x: re.compile('<date>(.*?)</date> <post>(.*?)</post>', re.IGNORECASE).findall(x))
 # list flattening and date extraction
 t2 = t1.flatMap(lambda xs: [x for x in xs]).map(lambda x: (date_revarsal(x[0]),x[1]))
-# 1. Search for industry mention list by date, 2. flatten it and 3. filter tuples with no industry mentions
-t3 = t2.map(lambda x: (x[0], industry_search(x[1].lower())))\
-    .map(lambda x:(x[0],[item for sublist in x[1] for item in sublist]))\
-    .filter(lambda x: False if len(x[1])==0 else True)
+# 1. Search for industry mention list by date flatten it and 2. filter tuples with no industry mentions
+t3 = t2.map(lambda x: (x[0], industry_search(x[1].lower()))).filter(lambda x: False if len(x[1])==0 else True)
 # Set industry name (lower case) as key and flatten to list of tuples with key as (industry,date)
 t4 = t3.map(lambda x: key_by_industry_date(x)).flatMap(lambda xs : [x for x in xs])
 # Reduce by (industry,date) key to get counts, then set key as industry and group by key

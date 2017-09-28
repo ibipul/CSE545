@@ -1,4 +1,5 @@
 from pprint import pprint
+import time
 import re, os
 from operator import add
 from pyspark import SparkContext
@@ -49,7 +50,7 @@ def key_by_industry_date(date_industry_tuple):
         key_reversal_list.append(((industry, date_str),1))
     return key_reversal_list
 
-
+start_time = time.time()
 # Prob 2b part 1
 files_list = os.listdir(_LOCAL_DIR_PATH)
 file_names = sc.parallelize(files_list)
@@ -58,6 +59,10 @@ unique_industries_list = file_names.map(lambda x: (x.split('.')[3],1))\
 # This a spark Broadcast variable
 industry_set_list = sc.broadcast(set(unique_industries_list.collect()))
 
+end_time1 = time.time()
+print(' Part A ran for: ', (end_time1 - start_time)/60, ' mins.')
+
+end_time1 = time.time()
 # Prob 2b part 2:
 # Following is how the transformation works on RDD, and how they look in each stage
 # data: [(file_name, contents as string) ...]
@@ -86,3 +91,7 @@ final_aggregate = t5.collect()
 
 ## Pretty print of the output
 pprint(sorted(list(final_aggregate)))
+
+end_time2 = time.time()
+
+print(' Part B ran for: ', (end_time2 - end_time1)/60,' mins')

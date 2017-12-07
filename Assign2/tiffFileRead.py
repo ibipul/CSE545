@@ -12,7 +12,6 @@ def readFileInBinary(filename):
     with open(filename, 'rb') as f:
         fbin = f.read()
     f.close()
-
     return fbin
 
 def getOrthoTif(zfBytes):

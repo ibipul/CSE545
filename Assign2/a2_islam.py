@@ -201,8 +201,8 @@ def lshTransform(kv, band_count = 16):
     vfunc = np.vectorize(customHashFunc)
     band_hash_list = vfunc(img_sig_chunks)
     # Key: (band_id, bucket_id)
-    zip_list_1 = list(zip(np.arange(band_size),band_hash_list))
-    img_name_list = [[img_name]]*band_size
+    zip_list_1 = list(zip(np.arange(band_count),band_hash_list))
+    img_name_list = [[img_name]]*band_count
     return list(zip(zip_list_1,img_name_list))
 
 def filter4Sample(kv):
@@ -383,7 +383,7 @@ rdd6 = rdd5.map(lambda kv: getRowColDiffFeatureVec(kv))
 ## Get Image signatures: [(img-0, 128char-0),(img-1, 128bsig-2)...]
 rdd7 = rdd6.map(lambda kv: getImageSignature(kv))
 ## RUN LSH grouping
-rdd8 = rdd7.flatMap(lambda kv: lshTransform(kv,32))
+rdd8 = rdd7.flatMap(lambda kv: lshTransform(kv,16))
 ## reduce by (band, bucket) key
 rdd9 = rdd8.reduceByKey(lambda x,y: x+y)
 ## Remove tuples which do not have target tuples.
@@ -440,11 +440,15 @@ pprint(sorted(dist_tab,key=lambda x: x[1]))
 end_time = time.time()
 print("Total Time elapsed before Extra Creds: ", (end_time - start_time)/60,' mins \n')
 
-# ###########################
-# ##
-# ##  Extra Credit Things
-# ##
-# ############################
+##  We need to run down scale with param=5, and getImageSignature with chunk_size=154
+##  Feature vectors will be of size: 19800. Commenting out the bonus credit code, couldn't run on large sample.
+##
+
+###########################
+##
+##  Extra Credit Things
+##
+############################
 # rdd5 = rdd4.map(lambda kv: downScaleResolution(kv,5)) # Shape is 100x100
 # rdd6 = rdd5.map(lambda kv: getRowColDiffFeatureVec(kv)) # Feature Vector: 19800
 # # Bonus LSH Section
